@@ -1,0 +1,6 @@
+CREATE TABLE teams (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  invite_code TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

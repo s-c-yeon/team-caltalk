@@ -99,6 +99,32 @@
       }
     },
     "/api/teams": {
+      "get": {
+        "tags": ["Teams"],
+        "summary": "내가 소속된 팀 목록 조회",
+        "description": "인증된 사용자가 소속된 팀 목록과 각 팀에서의 역할(role)을 조회한다. 로그인 직후 기본 팀 선택(FE-03) 및 팀 전환(FE-11, BR-11)에 사용된다.",
+        "responses": {
+          "200": {
+            "description": "소속 팀 목록",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TeamMembership" }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": ["Teams"],
         "summary": "팀 생성",
@@ -685,6 +711,20 @@
           "created_at": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "team_id", "user_id", "role"]
+      },
+      "TeamMembership": {
+        "type": "object",
+        "description": "GET /api/teams 응답 항목. teams와 team_members를 조인한 조회 전용 뷰(team_id 컬럼 등 새 테이블/컬럼을 추가하지 않음).",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 10 },
+          "name": { "type": "string", "example": "개발팀" },
+          "role": {
+            "type": "string",
+            "enum": ["leader", "member"]
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "role"]
       },
       "Schedule": {
         "type": "object",
