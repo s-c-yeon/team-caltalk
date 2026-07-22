@@ -1,0 +1,901 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Team CalTalk API",
+    "version": "0.1.0",
+    "description": "팀 캘린더와 팀 채팅을 한 화면에서 제공하고, 일정 변경에는 채팅 근거(ScheduleChangeRequest)가 남도록 하는 Team CalTalk MVP REST API (근거: docs/2-PRD.md, docs/3-user-scenarios.md, docs/4-project-structure-principles.md, docs/6-execution-plan.md)."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "로컬 개발 서버 (PRD §7 단일 인스턴스 전제)"
+    }
+  ],
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "회원가입/로그인 (FR-01, TERM-01)" },
+    { "name": "Teams", "description": "팀 생성/가입/탈퇴 (FR-02, FR-15, FR-16, TERM-02/03/04)" },
+    { "name": "Schedules", "description": "팀 캘린더 일정 조회/생성/수정/삭제 (FR-03~06, TERM-05)" },
+    { "name": "ChatMessages", "description": "일자별 채팅 이력 조회/메시지 전송 (FR-07~09, TERM-06/07/09)" },
+    { "name": "ScheduleChangeRequests", "description": "미반영 일정 변경 요청 조회 (FR-10/11, TERM-08)" }
+  ],
+  "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "회원가입",
+        "description": "이메일 기반 회원가입. 비밀번호는 서버에서 해시(bcrypt)하여 저장한다(FR-01, BR-01, TERM-01, SC-01).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SignupRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "회원가입 성공",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(이메일 형식 오류, 비밀번호 누락, 이메일 중복 등)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "로그인",
+        "description": "이메일/비밀번호 인증 후 JWT를 발급한다(FR-01, BR-01, SC-01).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공, JWT 발급",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 값 검증 실패(이메일/비밀번호 누락 등)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "이메일 또는 비밀번호가 올바르지 않음",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams": {
+      "post": {
+        "tags": ["Teams"],
+        "summary": "팀 생성",
+        "description": "팀을 생성한다. 생성자는 team_members.role='leader'로 자동 등록된다(FR-02, §3.3, BE-03).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TeamCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "팀 생성 성공(생성자=팀장)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Team" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(팀 이름 누락 등)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(JWT 없음/무효, BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/members": {
+      "post": {
+        "tags": ["Teams"],
+        "summary": "초대코드로 팀 가입",
+        "description": "초대 코드를 통해 팀에 합류한다. 가입한 사용자는 team_members.role='member'로 등록된다(FR-02, BE-03).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TeamJoinRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "팀 가입 성공(팀원으로 등록)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TeamMember" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(초대 코드 누락/불일치)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "팀을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/members/me": {
+      "delete": {
+        "tags": ["Teams"],
+        "summary": "팀 탈퇴(본인)",
+        "description": "요청자 본인을 해당 팀에서 탈퇴 처리한다. 유일한 팀장의 탈퇴는 차단된다(BR-09, EX-01). 마지막 소속 팀 탈퇴 후에도 계정은 유지된다(BR-12, EX-04).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "팀 탈퇴 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "팀에서 탈퇴했습니다." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패 — 팀에 남은 유일한 팀장은 탈퇴할 수 없음(BR-09, §6.1, EX-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/schedules": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "팀 캘린더 일정 조회 (월/주/일)",
+        "description": "팀에 소속된 사용자(팀장/팀원 모두)가 월/주/일 단위로 일정을 조회한다(FR-03, BR-08, UC-01, SC-01). 팀원도 조회는 가능하며 BR-04는 생성/수정/삭제에만 적용된다.",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" },
+          {
+            "name": "view",
+            "in": "query",
+            "required": true,
+            "description": "캘린더 뷰 종류",
+            "schema": { "type": "string", "enum": ["month", "week", "day"] }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "기준 날짜. view에 따라 해당 월/주/일 범위로 필터링된다.",
+            "schema": { "type": "string", "format": "date", "example": "2026-07-01" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Schedule" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(view/date 값 누락 또는 형식 오류)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "일정 생성 (팀장 전용)",
+        "description": "팀장만 일정을 생성할 수 있다(FR-04, BR-03, UC-02, SC-02, §8). 팀원이 호출하면 403이 반환된다.",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ScheduleCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "일정 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(제목 길이 1~100자 위반, 시작≥종료, 대상 단일 선택 위반 등, §8)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아니거나(BR-02), 팀원이 팀장 전용 액션을 시도함(BR-03)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/schedules/{scheduleId}": {
+      "patch": {
+        "tags": ["Schedules"],
+        "summary": "일정 수정 (팀장 전용)",
+        "description": "팀장만 일정을 수정할 수 있다(FR-05, BR-03, UC-03, SC-03/07, §8). 동시 수정 시 낙관적 잠금 없이 나중 저장이 그대로 반영된다(Last-Write-Wins, BR-10, EX-02) — 충돌 응답 코드는 존재하지 않는다. 팀장이 팀원의 ScheduleChangeRequest를 검토한 뒤 이 API로 직접 반영하는 것이 유일한 반영 경로다(승인/반려 API 없음, §1.2).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" },
+          { "$ref": "#/components/parameters/ScheduleIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ScheduleUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "일정 수정 성공(최종 저장 내용이 그대로 반영됨)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(제목 길이, 시작≥종료, 대상 단일 선택 위반 등, §8)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아니거나(BR-02), 팀원이 팀장 전용 액션을 시도함(BR-03)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "해당 팀에 대상 일정이 존재하지 않음",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Schedules"],
+        "summary": "일정 삭제 (팀장 전용)",
+        "description": "팀장만 일정을 삭제할 수 있다(FR-05, BR-03, UC-03, SC-03).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" },
+          { "$ref": "#/components/parameters/ScheduleIdPathParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "일정 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "일정이 삭제되었습니다." }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아니거나(BR-02), 팀원이 팀장 전용 액션을 시도함(BR-03)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "해당 팀에 대상 일정이 존재하지 않음",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/chat-messages": {
+      "get": {
+        "tags": ["ChatMessages"],
+        "summary": "일자별 채팅 이력 조회",
+        "description": "팀 + 날짜(서버 UTC 자정 기준) 조합으로 정의되는 채팅방의 이력을 시간순으로 조회한다. ChatRoom은 별도 리소스가 아니라 team_id와 date 쿼리 파라미터 조합으로만 표현된다(FR-07, FR-12, BR-06, BR-07, TERM-06/09, SC-05/08).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "채팅 이력을 조회할 날짜(서버 UTC 자정 기준 일자 구분)",
+            "schema": { "type": "string", "format": "date", "example": "2026-07-01" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공(시간순 정렬, 일반/변경요청 메시지 모두 포함)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ChatMessage" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(date 누락/형식 오류)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["ChatMessages"],
+        "summary": "채팅 메시지 전송 (일반 메시지 / 변경 요청)",
+        "description": "type으로 '일반 메시지(general)'와 '변경 요청(change_request)'을 명시적으로 구분해 전송한다(자연어 자동 판별 없음, FR-08/09, BR-05, TERM-07/08, UC-05, SC-06). type='change_request'인 경우에만 ScheduleChangeRequest 레코드가 채팅 메시지와 1:1로 함께 생성된다.",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatMessageCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "전송 성공. type='change_request'인 경우 schedule_change_request 필드가 함께 채워져 반환된다.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatMessageCreateResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "검증 실패(본문 길이 1~500자 위반, type='change_request'인데 request_type 누락 등, §8)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/schedule-change-requests": {
+      "get": {
+        "tags": ["ScheduleChangeRequests"],
+        "summary": "미반영 일정 변경 요청 목록 조회 (팀장용)",
+        "description": "아직 반영되지 않은 ScheduleChangeRequest 목록을 원본 채팅 메시지와 함께 조회한다(FR-10, BR-05, UC-06, SC-07). 이 목록에는 상태(status/approved/rejected) 필드가 존재하지 않는다 — 팀장이 검토 후 반영하려면 PATCH /api/teams/{teamId}/schedules/{scheduleId}를 재사용한다(§1.2, 승인/반려 API 없음).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ScheduleChangeRequestListItem" }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "로그인 시 발급되는 JWT를 Authorization: Bearer <token> 헤더로 전달한다(BR-01)."
+      }
+    },
+    "parameters": {
+      "TeamIdPathParam": {
+        "name": "teamId",
+        "in": "path",
+        "required": true,
+        "description": "팀 ID. 하위 리소스는 항상 /teams/:teamId 아래에 위치하며, 요청자의 팀 소속 여부가 검증된다(BR-02, §3.3).",
+        "schema": { "type": "integer", "format": "int64" }
+      },
+      "ScheduleIdPathParam": {
+        "name": "scheduleId",
+        "in": "path",
+        "required": true,
+        "description": "일정 ID",
+        "schema": { "type": "integer", "format": "int64" }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "공통 에러 응답 형식(구조원칙 §5.3)",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": { "type": "string", "example": "요청을 처리할 수 없습니다." },
+              "code": { "type": "string", "example": "VALIDATION_ERROR" }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["error"]
+      },
+      "User": {
+        "type": "object",
+        "description": "TERM-01 User. 도메인정의서 §3.1 매핑에 따른 users 테이블 대응 스키마(비밀번호 해시는 응답에 노출하지 않음).",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 1 },
+          "email": { "type": "string", "format": "email", "example": "leader@example.com" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "email"]
+      },
+      "Team": {
+        "type": "object",
+        "description": "TERM-02 Team. teams 테이블 대응 스키마. 팀장 여부는 teams가 아니라 team_members.role로만 판단한다(구조원칙 §3.1).",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 10 },
+          "name": { "type": "string", "example": "개발팀" },
+          "invite_code": {
+            "type": "string",
+            "description": "팀 가입에 사용되는 초대 코드. 팀 생성 응답에 포함되며, 팀장이 팀원에게 공유한다(§3.3, 도메인정의서 §3.3).",
+            "example": "AB12CD34"
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name"]
+      },
+      "TeamMember": {
+        "type": "object",
+        "description": "TERM-03/04 팀장/팀원 역할. team_members 테이블 대응 스키마 — role 값으로만 팀장/팀원을 구분한다(구조원칙 §3.1).",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "team_id": { "type": "integer", "format": "int64" },
+          "user_id": { "type": "integer", "format": "int64" },
+          "role": {
+            "type": "string",
+            "enum": ["leader", "member"],
+            "description": "'leader'(팀장) 또는 'member'(팀원). 한 팀에 leader는 항상 정확히 1명이다(도메인정의서 §3.3)."
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "team_id", "user_id", "role"]
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "TERM-05 Schedule. schedules 테이블 대응 스키마.",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "team_id": { "type": "integer", "format": "int64" },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "일정 제목. 1자 이상 100자 이하, 공백만으로 구성된 제목은 허용하지 않는다(도메인정의서 §8)."
+          },
+          "start_at": { "type": "string", "format": "date-time", "description": "시작 일시. start_at < end_at 이어야 한다(§8)." },
+          "end_at": { "type": "string", "format": "date-time", "description": "종료 일시." },
+          "target_type": {
+            "type": "string",
+            "enum": ["all", "member"],
+            "description": "배정 대상. '팀 전체(all)' 또는 '특정 팀원 1명(member)' 중 단일 선택(§8)."
+          },
+          "target_member_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "target_type='member'일 때만 값이 존재해야 하는 필드다. target_type='all'이면 null이어야 한다(§8, DB CHECK 제약과 정합)."
+          },
+          "created_by": { "type": "integer", "format": "int64", "description": "일정을 생성한 팀장의 user_id." },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "team_id", "title", "start_at", "end_at", "target_type", "created_by"]
+      },
+      "ChatMessage": {
+        "type": "object",
+        "description": "TERM-07 ChatMessage. chat_messages 테이블 대응 스키마. ChatRoom(TERM-06)은 별도 테이블이 아니라 team_id+chat_date 조합으로만 표현된다(구조원칙 §3.1.1).",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "team_id": { "type": "integer", "format": "int64" },
+          "chat_date": {
+            "type": "string",
+            "format": "date",
+            "description": "이 메시지가 속한 채팅방 일자(서버 UTC 자정 기준 구분, §8)."
+          },
+          "sender_id": { "type": "integer", "format": "int64" },
+          "type": {
+            "type": "string",
+            "enum": ["general", "change_request"],
+            "description": "'general'(일반 메시지) 또는 'change_request'(변경 요청). 전송 시점에 사용자가 명시적으로 선택하며, 자연어 분석을 통한 자동 판별은 하지 않는다(BR-05, TERM-08). DB 컬럼명은 chat_messages.message_type이지만, API 요청/응답 필드명은 구조원칙 §3.3·실행계획 BE-06/BE-07/BE-09에 따라 type으로 통일한다."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "메시지 본문. 1자 이상 500자 이하(§8)."
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "team_id", "chat_date", "sender_id", "type", "content"]
+      },
+      "ScheduleChangeRequest": {
+        "type": "object",
+        "description": "TERM-08 ScheduleChangeRequest. schedule_change_requests 테이블 대응 스키마. 승인/반려 등 상태 필드는 존재하지 않는다(도메인정의서 §1.2, §10.2) — 팀장의 반영은 PATCH /schedules/{scheduleId}를 재사용한다.",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "chat_message_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "원본이 된 채팅 메시지의 ID. 메시지 1건당 최대 1개의 요청만 존재하도록 UNIQUE 제약이 걸려 있다(1:1 관계, §8)."
+          },
+          "requested_by": { "type": "integer", "format": "int64", "description": "요청을 생성한 팀원의 user_id." },
+          "request_type": {
+            "type": "string",
+            "enum": ["create", "update", "cancel"],
+            "description": "요청 의도 — 신규 등록(create) / 기존 일정 수정(update) / 취소(cancel)."
+          },
+          "target_schedule_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "요청이 참조하는 기존 일정 ID. request_type이 'update' 또는 'cancel'일 때 값이 채워지며, 'create'(신규 등록 요청)일 때는 null일 수 있다."
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "chat_message_id", "requested_by", "request_type"]
+      },
+      "ScheduleChangeRequestListItem": {
+        "type": "object",
+        "description": "팀장의 미반영 변경 요청 목록 조회 응답 항목. ScheduleChangeRequest에 원본 채팅 메시지를 조인해 함께 반환한다(FR-10, SC-07, BE-08). status/approved/rejected 등 상태 필드는 포함하지 않는다.",
+        "allOf": [
+          { "$ref": "#/components/schemas/ScheduleChangeRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "chat_message": { "$ref": "#/components/schemas/ChatMessage" }
+            },
+            "required": ["chat_message"]
+          }
+        ]
+      },
+      "SignupRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "leader@example.com" },
+          "password": { "type": "string", "format": "password", "minLength": 8, "example": "SecurePass123!" }
+        },
+        "required": ["email", "password"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "format": "password" }
+        },
+        "required": ["email", "password"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string", "description": "인증에 사용할 JWT(BR-01)." },
+          "user": { "$ref": "#/components/schemas/User" }
+        },
+        "required": ["token", "user"]
+      },
+      "TeamCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "example": "개발팀" }
+        },
+        "required": ["name"]
+      },
+      "TeamJoinRequest": {
+        "type": "object",
+        "properties": {
+          "invite_code": { "type": "string", "description": "팀장에게 공유받은 초대 코드.", "example": "AB12CD34" }
+        },
+        "required": ["invite_code"]
+      },
+      "ScheduleCreateRequest": {
+        "type": "object",
+        "description": "팀장 전용 일정 생성 요청(FR-04, §8).",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "start_at": { "type": "string", "format": "date-time" },
+          "end_at": { "type": "string", "format": "date-time" },
+          "target_type": { "type": "string", "enum": ["all", "member"] },
+          "target_member_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "target_type이 'member'일 때만 필요하다. target_type이 'all'이면 생략(또는 null)해야 한다."
+          }
+        },
+        "required": ["title", "start_at", "end_at", "target_type"]
+      },
+      "ScheduleUpdateRequest": {
+        "type": "object",
+        "description": "팀장 전용 일정 수정 요청. 변경할 필드만 부분 전송한다(FR-05, §8). 동시 수정 시 마지막 저장이 그대로 반영된다(Last-Write-Wins, BR-10).",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "start_at": { "type": "string", "format": "date-time" },
+          "end_at": { "type": "string", "format": "date-time" },
+          "target_type": { "type": "string", "enum": ["all", "member"] },
+          "target_member_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "target_type이 'member'일 때만 필요하다. target_type이 'all'이면 null이어야 한다."
+          }
+        }
+      },
+      "ChatMessageCreateRequest": {
+        "type": "object",
+        "description": "채팅 메시지 전송 요청. type='change_request'를 선택한 경우에만 request_type/target_schedule_id를 함께 지정한다(FR-08/09, BR-05, §8).",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["general", "change_request"],
+            "description": "'general'(일반 메시지) 또는 'change_request'(변경 요청). 전송 UI에서 명시적으로 선택되어야 하며 자동 판별되지 않는다(BR-05). DB 컬럼명은 chat_messages.message_type이지만, API 요청/응답 필드명은 구조원칙 §3.3·실행계획 BE-06/BE-07/BE-09에 따라 type으로 통일한다."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "메시지 본문. 1자 이상 500자 이하(§8)."
+          },
+          "request_type": {
+            "type": "string",
+            "enum": ["create", "update", "cancel"],
+            "description": "type='change_request'일 때만 필요하다. type='general'이면 무시된다."
+          },
+          "target_schedule_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "type='change_request'이고 request_type이 'update' 또는 'cancel'일 때 필요한, 요청 대상 기존 일정 ID. request_type='create'이거나 type='general'이면 필요하지 않다."
+          }
+        },
+        "required": ["type", "content"]
+      },
+      "ChatMessageCreateResponse": {
+        "type": "object",
+        "description": "채팅 메시지 전송 응답. type='change_request'인 경우에만 schedule_change_request가 채팅 메시지와 1:1로 함께 생성되어 반환된다(BR-05, BE-07).",
+        "properties": {
+          "chat_message": { "$ref": "#/components/schemas/ChatMessage" },
+          "schedule_change_request": {
+            "type": "object",
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ScheduleChangeRequest" }],
+            "description": "type='general'이면 null이다."
+          }
+        },
+        "required": ["chat_message"]
+      }
+    }
+  }
+}

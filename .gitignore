@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment variables (구조원칙 §5.1 — .env.example만 커밋, 실제 .env는 제외)
+.env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+
+# Build output (frontend Vite 빌드 등, 구조원칙 §6.2)
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code — 개인별 로컬 권한 설정은 제외, settings.json 등 공유 설정은 유지
+.claude/settings.local.json
+
+# npm/yarn 캐시
+.npm
+.eslintcache
