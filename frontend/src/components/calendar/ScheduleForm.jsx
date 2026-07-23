@@ -77,8 +77,8 @@ export function ScheduleForm({ mode, initialSchedule, members, onSave, onDelete,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-[420px] rounded-lg border border-neutral-200 bg-white shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="max-h-[90vh] w-full max-w-[420px] overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
         <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
           <h2 className="text-base font-semibold text-neutral-900">
             {mode === 'create' ? '일정 생성' : '일정 수정'}
@@ -108,8 +108,8 @@ export function ScheduleForm({ mode, initialSchedule, members, onSave, onDelete,
             <p className="mt-1 text-xs text-neutral-500">1~100자, 공백만으로는 입력 불가</p>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex-1">
+          <div className="flex flex-wrap gap-3">
+            <div className="min-w-[140px] flex-1">
               <label className="text-sm font-medium text-neutral-700" htmlFor="schedule-start">
                 시작 일시
               </label>

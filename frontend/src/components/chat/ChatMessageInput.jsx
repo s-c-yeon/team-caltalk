@@ -99,12 +99,12 @@ export function ChatMessageInput({ teamId, date, onSend }) {
       </div>
 
       {type === 'change_request' && (
-        <div className="mb-2 flex gap-2 text-sm">
+        <div className="mb-2 flex flex-wrap gap-2 text-sm">
           <select
             aria-label="요청 유형"
             value={requestType}
             onChange={(e) => setRequestType(e.target.value)}
-            className="rounded-md border border-neutral-300 px-2 py-1 text-sm"
+            className="min-w-0 flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm"
           >
             <option value="">요청 유형 선택</option>
             {Object.entries(REQUEST_TYPE_LABELS).map(([value, label]) => (
@@ -118,7 +118,7 @@ export function ChatMessageInput({ teamId, date, onSend }) {
               aria-label="대상 일정"
               value={targetScheduleId}
               onChange={(e) => setTargetScheduleId(e.target.value)}
-              className="rounded-md border border-neutral-300 px-2 py-1 text-sm"
+              className="min-w-0 flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm"
             >
               <option value="">대상 일정 선택</option>
               {schedules.map((schedule) => (
