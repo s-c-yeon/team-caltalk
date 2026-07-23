@@ -30,6 +30,16 @@ async function listMyTeams(req, res, next) {
   }
 }
 
+async function listTeamMembers(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    const members = await teamsService.listTeamMembers(Number(teamId));
+    res.status(200).json(members);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function leaveTeam(req, res, next) {
   try {
     const { teamId } = req.params;
@@ -40,4 +50,4 @@ async function leaveTeam(req, res, next) {
   }
 }
 
-module.exports = { createTeam, joinTeam, listMyTeams, leaveTeam };
+module.exports = { createTeam, joinTeam, listMyTeams, listTeamMembers, leaveTeam };
