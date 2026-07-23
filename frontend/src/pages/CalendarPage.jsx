@@ -6,7 +6,7 @@ import { ChatPanel } from '../components/chat/ChatPanel';
 import { ChangeRequestList } from '../components/change-requests/ChangeRequestList';
 
 export function CalendarPage() {
-  const { teams, loading, currentTeamId, setCurrentTeamId } = useTeams();
+  const { teams, loading, currentTeamId } = useTeams();
   const [selectedDate, setSelectedDate] = useState(null);
 
   if (loading) {
@@ -22,20 +22,6 @@ export function CalendarPage() {
 
   return (
     <div className="calendar-page">
-      <label>
-        팀 전환
-        <select
-          value={currentTeam.id}
-          onChange={(e) => setCurrentTeamId(Number(e.target.value))}
-        >
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name} ({team.role === 'leader' ? '팀장' : '팀원'})
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="grid h-[calc(100vh-56px)] grid-cols-[1fr_360px] gap-4 p-4">
         <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
           <CalendarView

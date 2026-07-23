@@ -63,9 +63,26 @@ export function CurrentTeamProvider({ children }) {
     return membership;
   }
 
+  async function leaveTeam(teamId) {
+    await teamsApi.leaveTeam(teamId);
+    const list = await refresh();
+    if (currentTeamId === teamId) {
+      setCurrentTeamId(list.length > 0 ? list[0].id : null);
+    }
+  }
+
   return (
     <CurrentTeamContext.Provider
-      value={{ teams, loading, currentTeamId, setCurrentTeamId, createTeam, joinTeam, refresh }}
+      value={{
+        teams,
+        loading,
+        currentTeamId,
+        setCurrentTeamId,
+        createTeam,
+        joinTeam,
+        leaveTeam,
+        refresh,
+      }}
     >
       {children}
     </CurrentTeamContext.Provider>
