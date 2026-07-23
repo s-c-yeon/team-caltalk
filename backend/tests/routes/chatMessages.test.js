@@ -177,6 +177,24 @@ test('본문이 501자 이상이면 400 반환됨', async () => {
   assert.equal(res.status, 400);
 });
 
+test('본문이 정확히 1자이면 전송이 허용됨(경계값)', async () => {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/chat-messages`)
+    .set('Authorization', `Bearer ${memberToken}`)
+    .send({ type: 'general', content: 'a' });
+
+  assert.equal(res.status, 201);
+});
+
+test('본문이 정확히 500자이면 전송이 허용됨(경계값)', async () => {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/chat-messages`)
+    .set('Authorization', `Bearer ${memberToken}`)
+    .send({ type: 'general', content: 'a'.repeat(500) });
+
+  assert.equal(res.status, 201);
+});
+
 test('type이 유효하지 않으면 400 반환됨', async () => {
   const res = await request(app)
     .post(`/api/teams/${teamId}/chat-messages`)
