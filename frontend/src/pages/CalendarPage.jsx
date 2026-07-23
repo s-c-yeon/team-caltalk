@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTeams } from '../hooks/useTeams';
 import { TeamOnboarding } from '../components/teams/TeamOnboarding';
 import { CalendarView } from '../components/calendar/CalendarView';
+import { ChatPanel } from '../components/chat/ChatPanel';
+import { ChangeRequestList } from '../components/change-requests/ChangeRequestList';
 
 export function CalendarPage() {
   const { teams, loading, currentTeamId, setCurrentTeamId } = useTeams();
@@ -16,6 +18,7 @@ export function CalendarPage() {
   }
 
   const currentTeam = teams.find((team) => team.id === currentTeamId) || teams[0];
+  const isLeader = currentTeam.role === 'leader';
 
   return (
     <div className="calendar-page">
@@ -32,15 +35,26 @@ export function CalendarPage() {
           ))}
         </select>
       </label>
-      <div className="h-[calc(100vh-56px)] p-4">
-        <section className="h-full overflow-hidden rounded-lg border border-neutral-200 bg-white">
+
+      <div className="grid h-[calc(100vh-56px)] grid-cols-[1fr_360px] gap-4 p-4">
+        <section className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
           <CalendarView
             teamId={currentTeam.id}
-            isLeader={currentTeam.role === 'leader'}
+            isLeader={isLeader}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
           />
         </section>
+        <aside className="flex min-h-0 flex-col gap-4">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-neutral-200 bg-white">
+            <ChatPanel teamId={currentTeam.id} date={selectedDate} />
+          </div>
+          {isLeader && (
+            <div className="max-h-64 shrink-0 overflow-auto rounded-lg border border-neutral-200 bg-white">
+              <ChangeRequestList teamId={currentTeam.id} onNavigateToChat={setSelectedDate} />
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
