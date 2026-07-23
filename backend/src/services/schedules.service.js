@@ -41,6 +41,14 @@ async function getSchedules(teamId, view, date) {
   return scheduleModel.findByTeamAndRange(teamId, start.toISOString(), end.toISOString());
 }
 
+async function getScheduleById(teamId, scheduleId) {
+  const schedule = await scheduleModel.findByIdAndTeam(scheduleId, teamId);
+  if (!schedule) {
+    throw new HttpError(404, 'SCHEDULE_NOT_FOUND', '해당 팀에 일정이 존재하지 않습니다.');
+  }
+  return schedule;
+}
+
 function toNullableInt(value) {
   if (value === undefined || value === null) {
     return null;
@@ -114,4 +122,4 @@ async function deleteSchedule(teamId, scheduleId) {
   await scheduleModel.remove(scheduleId);
 }
 
-module.exports = { getSchedules, createSchedule, updateSchedule, deleteSchedule };
+module.exports = { getSchedules, getScheduleById, createSchedule, updateSchedule, deleteSchedule };

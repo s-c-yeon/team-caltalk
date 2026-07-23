@@ -14,6 +14,12 @@ router.post(
   requireRole('leader'),
   schedulesController.createSchedule
 );
+router.get(
+  '/:scheduleId',
+  authMiddleware,
+  teamMembershipMiddleware,
+  schedulesController.getSchedule
+);
 router.patch(
   '/:scheduleId',
   authMiddleware,

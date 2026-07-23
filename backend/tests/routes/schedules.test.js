@@ -168,3 +168,44 @@ test('date 파라미터가 누락되면 400 반환됨', async () => {
 
   assert.equal(res.status, 400);
 });
+
+test('일정 단건 조회 시 팀원/팀장 모두 200으로 해당 일정을 반환함(FE-09)', async () => {
+  const list = await request(app)
+    .get(`/api/teams/${teamId}/schedules`)
+    .query({ view: 'day', date: '2026-07-15' })
+    .set('Authorization', `Bearer ${leaderToken}`);
+  const scheduleId = list.body[0].id;
+
+  const leaderRes = await request(app)
+    .get(`/api/teams/${teamId}/schedules/${scheduleId}`)
+    .set('Authorization', `Bearer ${leaderToken}`);
+  assert.equal(leaderRes.status, 200);
+  assert.equal(leaderRes.body.title, '이번 주 일정');
+
+  const memberRes = await request(app)
+    .get(`/api/teams/${teamId}/schedules/${scheduleId}`)
+    .set('Authorization', `Bearer ${memberToken}`);
+  assert.equal(memberRes.status, 200);
+});
+
+test('존재하지 않는 일정을 단건 조회하면 404 반환됨', async () => {
+  const res = await request(app)
+    .get(`/api/teams/${teamId}/schedules/999999`)
+    .set('Authorization', `Bearer ${leaderToken}`);
+
+  assert.equal(res.status, 404);
+});
+
+test('미소속 팀의 일정을 단건 조회하면 403 반환됨(BR-02)', async () => {
+  const list = await request(app)
+    .get(`/api/teams/${teamId}/schedules`)
+    .query({ view: 'day', date: '2026-07-15' })
+    .set('Authorization', `Bearer ${leaderToken}`);
+  const scheduleId = list.body[0].id;
+
+  const res = await request(app)
+    .get(`/api/teams/${teamId}/schedules/${scheduleId}`)
+    .set('Authorization', `Bearer ${outsiderToken}`);
+
+  assert.equal(res.status, 403);
+});
