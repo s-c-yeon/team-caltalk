@@ -68,6 +68,11 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  await pool.query(
+    `DELETE FROM schedule_change_requests
+     WHERE chat_message_id IN (SELECT id FROM chat_messages WHERE team_id = ANY($1))`,
+    [[teamId, otherTeamId]]
+  );
   await pool.query('DELETE FROM chat_messages WHERE team_id = ANY($1)', [[teamId, otherTeamId]]);
   await pool.query('DELETE FROM team_members WHERE team_id = ANY($1)', [[teamId, otherTeamId]]);
   await pool.query('DELETE FROM teams WHERE id = ANY($1)', [[teamId, otherTeamId]]);
@@ -141,15 +146,17 @@ test("type='general' 메시지 전송 시 201과 저장된 메시지가 반환�
   assert.equal(res.body.schedule_change_request, null);
 });
 
-test("type='change_request' 메시지도 저장은 되지만, 이 이슈(BE-06) 범위에서는 schedule_change_request 연동 없이 null로 반환됨(BE-07에서 연동 예정)", async () => {
+test("type='change_request' 메시지 전송 시 schedule_change_request가 1:1로 함께 생성되어 반환됨(BE-07)", async () => {
   const res = await request(app)
     .post(`/api/teams/${teamId}/chat-messages`)
     .set('Authorization', `Bearer ${memberToken}`)
-    .send({ type: 'change_request', content: '회의를 1시간 뒤로 옮겨주세요.' });
+    .send({ type: 'change_request', content: '회의를 1시간 뒤로 옮겨주세요.', request_type: 'create' });
 
   assert.equal(res.status, 201);
   assert.equal(res.body.chat_message.type, 'change_request');
-  assert.equal(res.body.schedule_change_request, null);
+  assert.ok(res.body.schedule_change_request);
+  assert.equal(res.body.schedule_change_request.chat_message_id, res.body.chat_message.id);
+  assert.equal(res.body.schedule_change_request.request_type, 'create');
 });
 
 test('본문이 빈 문자열이면 400 반환됨', async () => {
