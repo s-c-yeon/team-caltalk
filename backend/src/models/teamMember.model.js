@@ -28,4 +28,25 @@ async function create(teamId, userId, role) {
   return rows[0];
 }
 
-module.exports = { findByTeamAndUser, findTeamsByUserId, create };
+async function countLeadersByTeam(teamId) {
+  const { rows } = await pool.query(
+    `SELECT count(*) AS count FROM team_members WHERE team_id = $1 AND role = 'leader'`,
+    [teamId]
+  );
+  return Number(rows[0].count);
+}
+
+async function remove(teamId, userId) {
+  await pool.query('DELETE FROM team_members WHERE team_id = $1 AND user_id = $2', [
+    teamId,
+    userId,
+  ]);
+}
+
+module.exports = {
+  findByTeamAndUser,
+  findTeamsByUserId,
+  create,
+  countLeadersByTeam,
+  remove,
+};
