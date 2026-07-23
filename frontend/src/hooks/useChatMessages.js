@@ -23,5 +23,10 @@ export function useChatMessages(teamId, date) {
     fetchMessages();
   }, [fetchMessages]);
 
-  return { messages, loading, error, refetch: fetchMessages };
+  async function sendMessage(input) {
+    await chatMessagesApi.sendChatMessage(teamId, input);
+    await fetchMessages();
+  }
+
+  return { messages, loading, error, refetch: fetchMessages, sendMessage };
 }
