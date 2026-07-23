@@ -109,6 +109,24 @@ test('제목이 101자 이상이면 400 반환됨', async () => {
   assert.equal(res.status, 400);
 });
 
+test('제목이 정확히 1자이면 생성이 허용됨(경계값)', async () => {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/schedules`)
+    .set('Authorization', `Bearer ${leaderToken}`)
+    .send(validSchedulePayload({ title: 'a' }));
+
+  assert.equal(res.status, 201);
+});
+
+test('제목이 정확히 100자이면 생성이 허용됨(경계값)', async () => {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/schedules`)
+    .set('Authorization', `Bearer ${leaderToken}`)
+    .send(validSchedulePayload({ title: 'a'.repeat(100) }));
+
+  assert.equal(res.status, 201);
+});
+
 test('시작 일시가 종료 일시보다 앞서지 않으면(같거나 이후) 400 반환됨', async () => {
   const res = await request(app)
     .post(`/api/teams/${teamId}/schedules`)
