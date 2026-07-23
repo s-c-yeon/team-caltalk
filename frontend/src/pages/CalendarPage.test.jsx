@@ -137,4 +137,47 @@ describe('CalendarPage', () => {
       expect(screen.getByText('채팅 · 2026-07-20')).toBeInTheDocument();
     });
   });
+
+  describe('반응형 레이아웃(FE-12, 768px 기준선)', () => {
+    it('데스크톱 폭에서는 탭 없이 캘린더+채팅 패널이 나란히 동시 렌더링됨', async () => {
+      window.matchMedia = vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      });
+
+      render(<CalendarPage />);
+
+      expect(await screen.findByText('팀 회의')).toBeInTheDocument();
+      expect(screen.getByText(/^채팅 ·/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '캘린더' })).not.toBeInTheDocument();
+    });
+
+    it('모바일 폭에서는 상단 [캘린더]/[채팅] 탭으로 하나씩만 렌더링되고, 선택한 날짜는 탭 전환 후에도 유지됨(WF-09)', async () => {
+      window.matchMedia = vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      });
+
+      const user = userEvent.setup();
+      render(<CalendarPage />);
+
+      expect(await screen.findByText('팀 회의')).toBeInTheDocument();
+      expect(screen.queryByText(/^채팅 ·/)).not.toBeInTheDocument();
+
+      await user.click(screen.getByText('15'));
+      await user.click(screen.getByRole('button', { name: '채팅' }));
+
+      expect(screen.queryByText('팀 회의')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(chatMessagesApi.getChatMessages).toHaveBeenCalled();
+      });
+      const [, date] = chatMessagesApi.getChatMessages.mock.calls[0];
+      expect(screen.getByText(`채팅 · ${date}`)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: '캘린더' }));
+      expect(await screen.findByText('팀 회의')).toBeInTheDocument();
+    });
+  });
 });

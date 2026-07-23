@@ -5,11 +5,11 @@ function formatDateTime(iso) {
 export function ScheduleDetail({ schedule, isLeader, onEdit, onClose }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       onClick={onClose}
     >
       <div
-        className="w-[360px] rounded-lg border border-neutral-200 bg-white shadow-lg"
+        className="max-h-[90vh] w-full max-w-[360px] overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
