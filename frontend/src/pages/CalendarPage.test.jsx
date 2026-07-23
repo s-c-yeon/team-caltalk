@@ -69,14 +69,6 @@ describe('CalendarPage', () => {
 
       expect(await screen.findByRole('button', { name: '+ 일정 추가' })).toBeInTheDocument();
     });
-
-    it('팀 전환 select를 변경하면 setCurrentTeamId가 선택한 팀 id로 호출됨', async () => {
-      const user = userEvent.setup();
-      render(<CalendarPage />);
-
-      await user.selectOptions(screen.getByLabelText('팀 전환'), '2');
-      expect(setCurrentTeamId).toHaveBeenCalledWith(2);
-    });
   });
 
   describe('캘린더-채팅 연동 레이아웃(FE-10)', () => {

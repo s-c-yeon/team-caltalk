@@ -15,3 +15,7 @@ export function joinTeam(teamId, inviteCode) {
 export function listTeamMembers(teamId) {
   return apiClient.get(`/teams/${teamId}/members`);
 }
+
+export function leaveTeam(teamId) {
+  return apiClient.delete(`/teams/${teamId}/members/me`);
+}
