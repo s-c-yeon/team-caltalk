@@ -61,4 +61,42 @@ async function createMessageWithChangeRequest({
   }
 }
 
-module.exports = { createMessageWithChangeRequest };
+function formatChatDate(value) {
+  if (value instanceof Date) {
+    // pg parses DATE columns into a Date at local midnight (not UTC midnight),
+    // so reading it back via local getters avoids an off-by-one-day shift
+    // that toISOString() (UTC) would introduce outside the UTC timezone.
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return value;
+}
+
+function toApiListItem(row) {
+  return {
+    id: row.id,
+    chat_message_id: row.chat_message_id,
+    requested_by: row.requested_by,
+    request_type: row.request_type,
+    target_schedule_id: row.target_schedule_id,
+    created_at: row.created_at,
+    chat_message: {
+      id: row.chat_message_id,
+      team_id: row.message_team_id,
+      chat_date: formatChatDate(row.message_chat_date),
+      sender_id: row.message_sender_id,
+      type: row.message_type,
+      content: row.message_content,
+      created_at: row.message_created_at,
+    },
+  };
+}
+
+async function listChangeRequests(teamId) {
+  const rows = await scheduleChangeRequestModel.findAllByTeamWithMessage(teamId);
+  return rows.map(toApiListItem);
+}
+
+module.exports = { createMessageWithChangeRequest, listChangeRequests };

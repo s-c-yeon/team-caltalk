@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth.routes');
 const teamsRoutes = require('./routes/teams.routes');
 const schedulesRoutes = require('./routes/schedules.routes');
 const chatMessagesRoutes = require('./routes/chatMessages.routes');
+const scheduleChangeRequestsRoutes = require('./routes/scheduleChangeRequests.routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler.middleware');
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/teams/:teamId/schedules', schedulesRoutes);
 app.use('/api/teams/:teamId/chat-messages', chatMessagesRoutes);
+app.use('/api/teams/:teamId/schedule-change-requests', scheduleChangeRequestsRoutes);
 app.use('/api/teams', teamsRoutes);
 
 app.use(notFoundHandler);
