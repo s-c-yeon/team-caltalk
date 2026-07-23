@@ -1,5 +1,6 @@
 const chatMessageModel = require('../models/chatMessage.model');
 const { validateChatMessageInput } = require('../validators/chatMessage.validator');
+const scheduleChangeRequestsService = require('./scheduleChangeRequests.service');
 const { HttpError } = require('../middlewares/errorHandler.middleware');
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -42,6 +43,23 @@ async function sendMessage(teamId, senderId, input) {
   validateChatMessageInput(input);
 
   const chatDate = new Date().toISOString().slice(0, 10);
+
+  if (input.type === 'change_request') {
+    const { message, changeRequest } = await scheduleChangeRequestsService.createMessageWithChangeRequest({
+      teamId,
+      chatDate,
+      senderId,
+      content: input.content,
+      requestType: input.request_type,
+      targetScheduleId: input.target_schedule_id,
+    });
+
+    return {
+      chat_message: toApiMessage(message),
+      schedule_change_request: changeRequest,
+    };
+  }
+
   const row = await chatMessageModel.create({
     teamId,
     chatDate,

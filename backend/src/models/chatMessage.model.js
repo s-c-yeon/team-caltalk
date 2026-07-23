@@ -8,8 +8,8 @@ async function findByTeamAndDate(teamId, chatDate) {
   return rows;
 }
 
-async function create({ teamId, chatDate, senderId, messageType, content }) {
-  const { rows } = await pool.query(
+async function create({ teamId, chatDate, senderId, messageType, content }, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO chat_messages (team_id, chat_date, sender_id, message_type, content)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
