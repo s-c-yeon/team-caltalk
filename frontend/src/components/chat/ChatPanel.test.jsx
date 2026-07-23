@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ChatPanel } from './ChatPanel';
 import * as chatMessagesApi from '../../api/chatMessages.api';
 import * as teamsApi from '../../api/teams.api';
@@ -44,5 +45,37 @@ describe('ChatPanel', () => {
     expect(
       await screen.findByText('이 날짜에는 아직 채팅 이력이 없습니다.')
     ).toBeInTheDocument();
+  });
+
+  it('메시지 전송 성공 시 이력 목록이 자동으로 갱신됨(FE-08 완료 조건)', async () => {
+    chatMessagesApi.getChatMessages
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 1,
+          sender_id: 2,
+          type: 'general',
+          content: '새로 보낸 메시지',
+          created_at: '2026-07-15T00:12:00.000Z',
+        },
+      ]);
+    chatMessagesApi.sendChatMessage.mockResolvedValue({});
+
+    const user = userEvent.setup();
+    render(<ChatPanel teamId="5" date="2026-07-15" />);
+    await screen.findByText('이 날짜에는 아직 채팅 이력이 없습니다.');
+
+    await user.click(screen.getByRole('radio', { name: '일반 메시지' }));
+    await user.type(screen.getByLabelText('메시지'), '새로 보낸 메시지');
+    await user.click(screen.getByRole('button', { name: '전송' }));
+
+    await waitFor(() => {
+      expect(chatMessagesApi.sendChatMessage).toHaveBeenCalledWith('5', {
+        type: 'general',
+        content: '새로 보낸 메시지',
+      });
+    });
+    expect(chatMessagesApi.getChatMessages).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText('새로 보낸 메시지')).toBeInTheDocument();
   });
 });

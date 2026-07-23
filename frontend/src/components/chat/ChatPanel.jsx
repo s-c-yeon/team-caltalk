@@ -1,9 +1,10 @@
 import { useChatMessages } from '../../hooks/useChatMessages';
 import { useTeamMembers } from '../../hooks/useTeamMembers';
 import { ChatMessageList } from './ChatMessageList';
+import { ChatMessageInput } from './ChatMessageInput';
 
 export function ChatPanel({ teamId, date }) {
-  const { messages, loading, error } = useChatMessages(teamId, date);
+  const { messages, loading, error, sendMessage } = useChatMessages(teamId, date);
   const { members } = useTeamMembers(teamId);
 
   return (
@@ -20,6 +21,8 @@ export function ChatPanel({ teamId, date }) {
       {date && loading && <p className="p-4 text-sm text-neutral-500">불러오는 중...</p>}
       {date && error && <p className="p-4 text-sm text-danger-500">{error}</p>}
       {date && !loading && !error && <ChatMessageList messages={messages} members={members} />}
+
+      {date && <ChatMessageInput teamId={teamId} date={date} onSend={sendMessage} />}
     </div>
   );
 }
