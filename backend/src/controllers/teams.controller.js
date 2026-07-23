@@ -30,4 +30,14 @@ async function listMyTeams(req, res, next) {
   }
 }
 
-module.exports = { createTeam, joinTeam, listMyTeams };
+async function leaveTeam(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    await teamsService.leaveTeam(Number(teamId), req.user.id);
+    res.status(200).json({ message: '팀에서 탈퇴했습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createTeam, joinTeam, listMyTeams, leaveTeam };

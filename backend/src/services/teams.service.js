@@ -42,4 +42,24 @@ async function listMyTeams(userId) {
   return teamMemberModel.findTeamsByUserId(userId);
 }
 
-module.exports = { createTeam, joinTeam, listMyTeams };
+async function leaveTeam(teamId, userId) {
+  const membership = await teamMemberModel.findByTeamAndUser(teamId, userId);
+  if (!membership) {
+    throw new HttpError(403, 'NOT_TEAM_MEMBER', '해당 팀에 소속되어 있지 않습니다.');
+  }
+
+  if (membership.role === 'leader') {
+    const leaderCount = await teamMemberModel.countLeadersByTeam(teamId);
+    if (leaderCount <= 1) {
+      throw new HttpError(
+        400,
+        'SOLE_LEADER_CANNOT_LEAVE',
+        '탈퇴할 수 없습니다. 이 팀에는 다른 팀장이 없습니다.'
+      );
+    }
+  }
+
+  await teamMemberModel.remove(teamId, userId);
+}
+
+module.exports = { createTeam, joinTeam, listMyTeams, leaveTeam };
