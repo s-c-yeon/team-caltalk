@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as schedulesApi from '../api/schedules.api';
 
 export function useSchedules(teamId, view, date) {
@@ -6,34 +6,37 @@ export function useSchedules(teamId, view, date) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchSchedules = useCallback(() => {
     if (!teamId) {
-      return undefined;
+      return Promise.resolve();
     }
-    let cancelled = false;
     setLoading(true);
     setError(null);
-    schedulesApi
+    return schedulesApi
       .getSchedules(teamId, view, date)
-      .then((data) => {
-        if (!cancelled) {
-          setSchedules(data);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((data) => setSchedules(data))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [teamId, view, date]);
 
-  return { schedules, loading, error };
+  useEffect(() => {
+    fetchSchedules();
+  }, [fetchSchedules]);
+
+  async function createSchedule(input) {
+    await schedulesApi.createSchedule(teamId, input);
+    await fetchSchedules();
+  }
+
+  async function updateSchedule(scheduleId, input) {
+    await schedulesApi.updateSchedule(teamId, scheduleId, input);
+    await fetchSchedules();
+  }
+
+  async function deleteSchedule(scheduleId) {
+    await schedulesApi.deleteSchedule(teamId, scheduleId);
+    await fetchSchedules();
+  }
+
+  return { schedules, loading, error, createSchedule, updateSchedule, deleteSchedule };
 }

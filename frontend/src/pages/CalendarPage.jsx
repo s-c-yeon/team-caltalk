@@ -36,6 +36,7 @@ export function CalendarPage() {
         <section className="h-full overflow-hidden rounded-lg border border-neutral-200 bg-white">
           <CalendarView
             teamId={currentTeam.id}
+            isLeader={currentTeam.role === 'leader'}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
           />

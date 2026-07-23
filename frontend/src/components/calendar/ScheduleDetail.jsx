@@ -2,7 +2,7 @@ function formatDateTime(iso) {
   return new Date(iso).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export function ScheduleDetail({ schedule, onClose }) {
+export function ScheduleDetail({ schedule, isLeader, onEdit, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
@@ -31,6 +31,17 @@ export function ScheduleDetail({ schedule, onClose }) {
             {schedule.target_type === 'all' ? '팀 전체' : `팀원 #${schedule.target_member_id}`}
           </p>
         </div>
+        {isLeader && (
+          <div className="flex justify-end gap-2 border-t border-neutral-200 px-4 py-3">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              수정
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
