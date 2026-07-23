@@ -42,6 +42,10 @@ async function listMyTeams(userId) {
   return teamMemberModel.findTeamsByUserId(userId);
 }
 
+async function listTeamMembers(teamId) {
+  return teamMemberModel.findAllByTeam(teamId);
+}
+
 async function leaveTeam(teamId, userId) {
   const membership = await teamMemberModel.findByTeamAndUser(teamId, userId);
   if (!membership) {
@@ -62,4 +66,4 @@ async function leaveTeam(teamId, userId) {
   await teamMemberModel.remove(teamId, userId);
 }
 
-module.exports = { createTeam, joinTeam, listMyTeams, leaveTeam };
+module.exports = { createTeam, joinTeam, listMyTeams, listTeamMembers, leaveTeam };

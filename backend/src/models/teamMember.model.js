@@ -28,6 +28,18 @@ async function create(teamId, userId, role) {
   return rows[0];
 }
 
+async function findAllByTeam(teamId) {
+  const { rows } = await pool.query(
+    `SELECT users.id AS user_id, users.email, team_members.role
+     FROM team_members
+     JOIN users ON users.id = team_members.user_id
+     WHERE team_members.team_id = $1
+     ORDER BY team_members.created_at ASC`,
+    [teamId]
+  );
+  return rows;
+}
+
 async function countLeadersByTeam(teamId) {
   const { rows } = await pool.query(
     `SELECT count(*) AS count FROM team_members WHERE team_id = $1 AND role = 'leader'`,
@@ -47,6 +59,7 @@ module.exports = {
   findByTeamAndUser,
   findTeamsByUserId,
   create,
+  findAllByTeam,
   countLeadersByTeam,
   remove,
 };

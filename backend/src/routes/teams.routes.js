@@ -7,6 +7,12 @@ const router = express.Router();
 
 router.get('/', authMiddleware, teamsController.listMyTeams);
 router.post('/', authMiddleware, teamsController.createTeam);
+router.get(
+  '/:teamId/members',
+  authMiddleware,
+  teamMembershipMiddleware,
+  teamsController.listTeamMembers
+);
 router.post('/:teamId/members', authMiddleware, teamsController.joinTeam);
 router.delete(
   '/:teamId/members/me',
