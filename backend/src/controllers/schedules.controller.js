@@ -11,6 +11,16 @@ async function listSchedules(req, res, next) {
   }
 }
 
+async function getSchedule(req, res, next) {
+  try {
+    const { teamId, scheduleId } = req.params;
+    const schedule = await schedulesService.getScheduleById(Number(teamId), Number(scheduleId));
+    res.status(200).json(schedule);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function createSchedule(req, res, next) {
   try {
     const { teamId } = req.params;
@@ -45,4 +55,4 @@ async function deleteSchedule(req, res, next) {
   }
 }
 
-module.exports = { listSchedules, createSchedule, updateSchedule, deleteSchedule };
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule };

@@ -415,6 +415,49 @@
       }
     },
     "/api/teams/{teamId}/schedules/{scheduleId}": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "일정 단건 조회",
+        "description": "팀에 소속된 사용자(팀장/팀원 모두)가 일정 하나를 id로 조회한다. FE-09의 '일정으로 이동해 직접 수정' 진입점이 ScheduleForm을 기존 값으로 채우기 위해 사용한다(조회는 BR-04 제한 없음).",
+        "parameters": [
+          { "$ref": "#/components/parameters/TeamIdPathParam" },
+          { "$ref": "#/components/parameters/ScheduleIdPathParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증되지 않은 요청(BR-01)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "요청자가 해당 팀 소속이 아님(BR-02)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "해당 팀에 대상 일정이 존재하지 않음",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": ["Schedules"],
         "summary": "일정 수정 (팀장 전용)",

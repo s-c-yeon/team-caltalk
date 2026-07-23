@@ -5,6 +5,10 @@ export function getSchedules(teamId, view, date) {
   return apiClient.get(`/teams/${teamId}/schedules?${params.toString()}`);
 }
 
+export function getSchedule(teamId, scheduleId) {
+  return apiClient.get(`/teams/${teamId}/schedules/${scheduleId}`);
+}
+
 export function createSchedule(teamId, input) {
   return apiClient.post(`/teams/${teamId}/schedules`, input);
 }
